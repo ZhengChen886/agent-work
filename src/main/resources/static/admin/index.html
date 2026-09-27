@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agent Work · 管理后台</title>
+<style>
+  :root {
+    --primary: #2c3e50;
+    --accent: #3498db;
+    --success: #27ae60;
+    --warn: #f39c12;
+    --danger: #e74c3c;
+    --bg: #ecf0f3;
+    --panel: #ffffff;
+    --border: #e1e4e8;
+    --text: #2c3e50;
+    --text-secondary: #7f8c8d;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+  .layout { display: flex; min-height: 100vh; }
+
+  /* ===== Sidebar ===== */
+  .sidebar {
+    width: 240px; background: var(--primary); color: #ecf0f1;
+    display: flex; flex-direction: column;
+  }
+  .logo {
+    padding: 24px 20px 16px; border-bottom: 1px solid #34495e;
+  }
+  .logo h1 { font-size: 16px; font-weight: 600; }
+  .logo small { color: #95a5a6; font-size: 11px; }
+  .nav { padding: 12px 0; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 20px; cursor: pointer;
+    color: #bdc3c7; transition: all .15s;
+    border-left: 3px solid transparent;
+  }
+  .nav-item:hover { background: #34495e; color: #ecf0f1; }
+  .nav-item.active {
+    background: #34495e; color: #fff;
+    border-left-color: var(--accent);
+  }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-footer {
+    padding: 16px 20px; font-size: 11px;
+    color: #7f8c8d; border-top: 1px solid #34495e;
+  }
+
+  /* ===== Main ===== */
+  .main { flex: 1; overflow-y: auto; }
+  .header {
+    background: var(--panel); padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .header .crumb { font-size: 18px; font-weight: 600; }
+  .header .user { color: var(--text-secondary); font-size: 13px; }
+
+  .content { padding: 24px; }
+  .panel {
+    background: var(--panel); border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .panel-title {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-body { padding: 18px; }
+
+  /* ===== Cards ===== */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 18px; }
+  .stat-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .stat-label { color: var(--text-secondary); font-size: 12px; }
+  .stat-value { font-size: 26px; font-weight: 600; color: var(--primary); margin-top: 4px; }
+  .stat-icon { font-size: 30px; opacity: 0.5; }
+
+  /* ===== Tables ===== */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+  th { background: #f8f9fa; font-weight: 600; color: var(--text-secondary); }
+  tr:hover { background: #f8f9fa; }
+  .tag {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-size: 11px;
+    background: #ecf0f1; color: var(--text-secondary);
+  }
+  .tag-success { background: #d5f4e6; color: var(--success); }
+  .tag-warn { background: #fdebd0; color: var(--warn); }
+  .tag-danger { background: #fadbd8; color: var(--danger); }
+  .tag-info { background: #d6eaf8; color: var(--accent); }
+
+  /* ===== Buttons ===== */
+  .btn {
+    padding: 7px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: #fff;
+    cursor: pointer; font-size: 13px;
+    transition: all .15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #2980b9; color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* ===== Page ===== */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ===== Form ===== */
+  .form-row { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; }
+  .form-row label { min-width: 100px; font-size: 13px; color: var(--text-secondary); }
+  .form-row input, .form-row select {
+    flex: 1; padding: 7px 10px; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 13px;
+  }
+
+  /* ===== Tabs ===== */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab {
+    padding: 9px 16px; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary); font-size: 13px;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ===== Code block ===== */
+  pre {
+    background: #2c3e50; color: #ecf0f1;
+    padding: 12px; border-radius: 6px;
+    font-size: 12px; overflow-x: auto;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+
+  /* ===== Modal ===== */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-mask.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: 8px; padding: 20px;
+    width: min(560px, 90vw); max-height: 80vh; overflow-y: auto;
+  }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <h1>⚙ Admin Console</h1>
+      <small>Agent Work 后台</small>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="overview" onclick="switchPage('overview', this)">
+        <span class="icon">📊</span>总览
+      </div>
+      <div class="nav-item" data-page="tools" onclick="switchPage('tools', this)">
+        <span class="icon">🛠</span>工具管理
+      </div>
+      <div class="nav-item" data-page="skills" onclick="switchPage('skills', this)">
+        <span class="icon">📦</span>技能管理
+      </div>
+      <div class="nav-item" data-page="metrics" onclick="switchPage('metrics', this)">
+        <span class="icon">📈</span>指标监控
+      </div>
+      <div class="nav-item" data-page="jvm" onclick="switchPage('jvm', this)">
+        <span class="icon">💻</span>JVM 信息
+      </div>
+      <div class="nav-item" data-page="config" onclick="switchPage('config', this)">
+        <span class="icon">⚡</span>运行时配置
+      </div>
+      <div class="nav-item" data-page="templates" onclick="switchPage('templates', this)">
+        <span class="icon">📝</span>模板管理
+      </div>
+      <div class="nav-item" data-page="agent-roles" onclick="switchPage('agent-roles', this)">
+        <span class="icon">🤖</span>agent角色
+      </div>
+      <div class="nav-item" data-page="model-providers" onclick="switchPage('model-providers', this)">
+        <span class="icon">🔌</span>模型供应商
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div>主端口: <code>8080</code></div>
+      <div>管理端口: <code>8088</code></div>
+      <div style="margin-top:6px"><a href="http://localhost:8080" style="color:#3498db;text-decoration:none">→ 用户端</a></div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main">
+    <div class="header">
+      <div class="crumb" id="pageTitle">总览</div>
+      <div class="user">当前 Admin: <strong>admin</strong> · 端口 8088</div>
+    </div>
+    <div class="content">
+
+      <!-- ============ 总览 ============ -->
+      <div class="page active" id="page-overview">
+        <div class="grid">
+          <div class="stat-card">
+            <div><div class="stat-label">已注册工具</div><div class="stat-value" id="stat-tools">-</div></div>
+            <div class="stat-icon">🛠</div>
+          </div>
+          <div class="stat-card">
+            <div><div class="stat-label">工具分类</div><div class="stat-value" id="stat-categories">-</div></div>
+            <div class="stat-icon">📁</div>
+          </div>
+          <div class="stat-card">
+            <div><div class="stat-label">已加载技能</div><div class="stat-value" id="stat-skills">-</div></div>
+            <div class="stat-icon">📦</div>
+          </div>
+          <div class="stat-card">
+            <div><div class="stat-label">Java 版本</div><div class="stat-value" id="stat-java" style="font-size:18px">-</div></div>
+            <div class="stat-icon">☕</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">系统信息</div>
+          <div class="panel-body">
+            <table>
+              <tbody id="overview-sysinfo"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">运行时配置</div>
+          <div class="panel-body">
+            <table>
+              <tbody id="overview-config"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 工具管理 ============ -->
+      <div class="page" id="page-tools">
+        <div class="panel">
+          <div class="panel-title">
+            工具列表
+            <span><button class="btn btn-primary btn-sm" onclick="loadTools()">刷新</button></span>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:200px">工具名</th>
+                  <th>描述</th>
+                  <th style="width:140px">分类</th>
+                  <th style="width:80px">状态</th>
+                  <th style="width:160px">操作</th>
+                </tr>
+              </thead>
+              <tbody id="tools-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 技能管理 ============ -->
+      <div class="page" id="page-skills">
+        <div class="panel">
+          <div class="panel-title">已加载的 Skills</div>
+          <div class="panel-body" style="padding:0">
+            <table>
+              <thead>
+                <tr><th>名称</th><th>描述</th><th>路径</th></tr>
+              </thead>
+              <tbody id="skills-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">上传新 Skill</div>
+          <div class="panel-body">
+            <p style="color:var(--text-secondary);margin-bottom:12px;font-size:13px">
+              技能管理功能请前往 <a href="http://localhost:8080" style="color:var(--accent)">用户端 (8080) → 技能管理</a> 上传。
+              上传后此处会自动刷新。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 指标监控 ============ -->
+      <div class="page" id="page-metrics">
+        <div class="panel">
+          <div class="panel-title">
+            Micrometer 指标
+            <button class="btn btn-primary btn-sm" onclick="loadMetrics()">刷新</button>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <table>
+              <thead>
+                <tr><th>名称</th><th>类型</th><th>值</th><th>Tags</th></tr>
+              </thead>
+              <tbody id="metrics-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ JVM 信息 ============ -->
+      <div class="page" id="page-jvm">
+        <div class="panel">
+          <div class="panel-title">JVM 详细信息</div>
+          <div class="panel-body">
+            <div class="form-row"><label>Java 版本</label><input id="jvm-version" readonly></div>
+            <div class="form-row"><label>操作系统</label><input id="jvm-os" readonly></div>
+            <div class="form-row"><label>处理器</label><input id="jvm-cpu" readonly></div>
+            <div class="form-row"><label>启动时长</label><input id="jvm-uptime" readonly></div>
+            <h3 style="margin:14px 0 10px;font-size:14px">内存</h3>
+            <div class="form-row"><label>已用</label><input id="jvm-mem-used" readonly></div>
+            <div class="form-row"><label>总分配</label><input id="jvm-mem-total" readonly></div>
+            <div class="form-row"><label>最大</label><input id="jvm-mem-max" readonly></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 运行时配置 ============ -->
+      <div class="page" id="page-config">
+        <div class="panel">
+          <div class="panel-title">当前生效的配置</div>
+          <div class="panel-body">
+            <table>
+              <tbody id="config-tbody"></tbody>
+            </table>
+            <p style="margin-top:14px;color:var(--text-secondary);font-size:12px">
+              说明：所有配置仅展示运行中的实际值。修改配置后请重启应用。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 模板管理 ============ -->
+      <div class="page" id="page-templates">
+        <div class="panel">
+          <div class="panel-title">
+            Prompt 模板版本管理
+            <button class="btn btn-primary btn-sm" onclick="loadTemplatesAdmin()">刷新</button>
+          </div>
+          <div class="panel-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+              <!-- 模板列表 -->
+              <div>
+                <h4 style="margin-bottom:12px;font-size:14px">模板列表</h4>
+                <div id="adminTemplatesList"></div>
+              </div>
+              <!-- 版本历史 / 编辑 -->
+              <div id="adminTemplateDetail" style="display:none">
+                <h4 style="margin-bottom:12px;font-size:14px">
+                  <span id="adminDetailTitle"></span>
+                  <button class="btn btn-sm" onclick="showAdminTemplatesList()">← 返回</button>
+                </h4>
+                <div class="form-row">
+                  <label>版本</label>
+                  <input id="adminDetailVersion" readonly style="background:#f8f9fa">
+                </div>
+                <div class="form-row">
+                  <label>更新时间</label>
+                  <input id="adminDetailDate" readonly style="background:#f8f9fa">
+                </div>
+                <div class="form-row">
+                  <label>描述</label>
+                  <input id="adminDetailDesc" style="width:100%">
+                </div>
+                <div style="margin-top:12px">
+                  <label style="display:block;margin-bottom:6px;font-size:12px;color:var(--text-secondary)">内容 (Markdown)</label>
+                  <textarea id="adminDetailContent" rows="15" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:12px"></textarea>
+                </div>
+                <div style="margin-top:12px;display:flex;gap:8px">
+                  <button class="btn btn-primary" onclick="saveAdminTemplate()">保存</button>
+                </div>
+                <hr style="margin:16px 0">
+                <h4 style="font-size:14px;margin-bottom:8px">版本历史</h4>
+                <div id="adminVersionHistory"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ Agent角色 ============ -->
+      <div class="page" id="page-agent-roles">
+        <div class="panel">
+          <div class="panel-title">
+            Agent 角色模板管理
+            <button class="btn btn-primary btn-sm" onclick="loadAgentRoles()">刷新</button>
+          </div>
+          <div class="panel-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+              <!-- 角色列表 -->
+              <div>
+                <h4 style="margin-bottom:12px;font-size:14px">角色模板列表</h4>
+                <div id="agentRolesList"></div>
+              </div>
+              <!-- 角色详情 / 编辑 -->
+              <div id="agentRoleDetail" style="display:none">
+                <h4 style="margin-bottom:12px;font-size:14px">
+                  <span id="agentDetailTitle"></span>
+                  <button class="btn btn-sm" onclick="showAgentRolesList()">← 返回</button>
+                </h4>
+                <div class="form-row">
+                  <label>版本</label>
+                  <input id="agentDetailVersion" readonly style="background:#f8f9fa">
+                </div>
+                <div class="form-row">
+                  <label>更新时间</label>
+                  <input id="agentDetailDate" readonly style="background:#f8f9fa">
+                </div>
+                <div class="form-row">
+                  <label>描述</label>
+                  <input id="agentDetailDesc" style="width:100%">
+                </div>
+                <div style="margin-top:12px">
+                  <label style="display:block;margin-bottom:6px;font-size:12px;color:var(--text-secondary)">角色定义 (Markdown)</label>
+                  <textarea id="agentDetailContent" rows="15" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:12px"></textarea>
+                </div>
+                <div style="margin-top:12px;display:flex;gap:8px">
+                  <button class="btn btn-primary" onclick="saveAgentRole()">保存</button>
+                </div>
+                <hr style="margin:16px 0">
+                <h4 style="font-size:14px;margin-bottom:8px">版本历史</h4>
+                <div id="agentVersionHistory"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 模型供应商 ============ -->
+      <div class="page" id="page-model-providers">
+        <div class="panel">
+          <div class="panel-title">
+            供应商列表（兼容 OpenAI Chat API）
+            <span>
+              <button class="btn btn-primary btn-sm" onclick="loadProvidersAdmin()">刷新</button>
+              <button class="btn btn-primary btn-sm" onclick="showProviderModal()">+ 新增供应商</button>
+            </span>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <table>
+              <thead>
+                <tr>
+                  <th>名称</th>
+                  <th>基础 URL</th>
+                  <th>默认模型</th>
+                  <th style="width:80px">模型数</th>
+                  <th style="width:90px">状态</th>
+                  <th style="width:280px">操作</th>
+                </tr>
+              </thead>
+              <tbody id="providers-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">连通性测试结果</div>
+          <div class="panel-body" id="provider-test-result" style="color:var(--text-secondary);font-size:13px">点击「测试」后，结果将显示在此处。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- 工具调用测试弹窗 -->
+<div class="modal-mask" id="toolModal">
+  <div class="modal">
+    <div class="modal-title">调用工具：<span id="toolModalName"></span></div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:12px;color:var(--text-secondary)">参数（JSON 格式）</label>
+      <textarea id="toolArgs" rows="6" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:12px">{}</textarea>
+    </div>
+    <div style="background:#f8f9fa;padding:10px;border-radius:6px;max-height:200px;overflow:auto">
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">结果：</div>
+      <pre id="toolResult" style="background:transparent;color:var(--text);margin:0;max-height:160px;overflow:auto">点击"执行"调用</pre>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeToolModal()">关闭</button>
+      <button class="btn btn-primary" onclick="invokeTool()">执行</button>
+    </div>
+  </div>
+</div>
+
+<!-- 供应商新增/编辑弹窗 -->
+<div class="modal-mask" id="providerModal">
+  <div class="modal">
+    <div class="modal-title" id="providerModalTitle">新增供应商</div>
+    <input type="hidden" id="providerEditId">
+    <div class="form-row"><label>供应商ID</label><input id="provProviderId" placeholder="如 openai、deepseek（唯一标识）"></div>
+    <div class="form-row"><label>名称</label><input id="provName" placeholder="如 OpenAI、DeepSeek"></div>
+    <div class="form-row"><label>基础 URL</label><input id="provBaseUrl" placeholder="需含版本路径，如 https://open.bigmodel.cn/api/paas/v4"></div>
+    <div class="form-row"><label>API Key</label><input id="provApiKey" placeholder="sk-..."></div>
+    <div class="form-row"><label>默认模型</label><input id="provDefaultModel" placeholder="如 gpt-4o-mini"></div>
+    <div class="form-row"><label>模型列表</label><input id="provAvailableModels" placeholder="逗号分隔，留空则通过「同步模型」拉取"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeProviderModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveProvider()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_BASE = '/api/admin';
+const MAIN_API_BASE = 'http://localhost:8080/api';
+
+async function fetchAdmin(path, opts) {
+  const resp = await fetch(ADMIN_BASE + '/' + path, opts);
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  return await resp.json();
+}
+
+function switchPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (el) el.classList.add('active');
+  const titles = {overview:'总览', tools:'工具管理', skills:'技能管理', metrics:'指标监控', jvm:'JVM 信息', config:'运行时配置', templates:'模板管理', 'agent-roles':'agent角色', 'model-providers':'模型供应商'};
+  document.getElementById('pageTitle').textContent = titles[page] || page;
+  if (page === 'overview') loadOverview();
+  if (page === 'tools') loadTools();
+  if (page === 'skills') loadSkills();
+  if (page === 'metrics') loadMetrics();
+  if (page === 'jvm') loadJvm();
+  if (page === 'config') loadConfig();
+  if (page === 'templates') loadTemplatesAdmin();
+  if (page === 'agent-roles') loadAgentRoles();
+  if (page === 'model-providers') loadProvidersAdmin();
+}
+
+async function loadOverview() {
+  const data = await fetchAdmin('overview');
+  document.getElementById('stat-tools').textContent = data.tools.count;
+  document.getElementById('stat-categories').textContent = data.tools.categories;
+  // skills 数量（从另一个接口补）
+  try {
+    const sk = await fetchAdmin('skills');
+    document.getElementById('stat-skills').textContent = Array.isArray(sk) ? sk.length : '-';
+  } catch (e) {
+    document.getElementById('stat-skills').textContent = '-';
+  }
+  document.getElementById('stat-java').textContent = data.jvm.java_version;
+
+  const sysinfo = document.getElementById('overview-sysinfo');
+  sysinfo.innerHTML = '';
+  const sysRows = [
+    ['Java 版本', data.jvm.java_version],
+    ['操作系统', data.jvm.os],
+    ['处理器', data.jvm.processors + ' 核'],
+    ['启动时长', formatDuration(data.jvm.uptime_ms)],
+    ['已用内存', data.jvm.memory.used_mb + ' MB'],
+    ['总内存', data.jvm.memory.total_mb + ' MB'],
+    ['最大内存', data.jvm.memory.max_mb + ' MB']
+  ];
+  sysRows.forEach(([k, v]) => {
+    sysinfo.insertAdjacentHTML('beforeend',
+      `<tr><td style="width:160px;color:var(--text-secondary)">${k}</td><td>${v}</td></tr>`);
+  });
+
+  const cfg = document.getElementById('overview-config');
+  cfg.innerHTML = '';
+  Object.entries(data.config).forEach(([k, v]) => {
+    cfg.insertAdjacentHTML('beforeend',
+      `<tr><td style="width:160px;color:var(--text-secondary)">${k}</td><td><code>${v}</code></td></tr>`);
+  });
+}
+
+async function loadTools() {
+  const data = await fetchAdmin('tools');
+  const tbody = document.getElementById('tools-tbody');
+  tbody.innerHTML = '';
+  data.tools.forEach(t => {
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td><code>${t.name}</code></td>
+        <td>${t.description}</td>
+        <td><span class="tag tag-info">${t.category}</span></td>
+        <td><span class="tag tag-success">已启用</span></td>
+        <td>
+          <button class="btn btn-sm btn-primary" onclick="showToolModal('${t.name}')">调用</button>
+          <button class="btn btn-sm" onclick="showToolInfo('${t.name}')">详情</button>
+        </td>
+      </tr>
+    `);
+  });
+}
+
+async function loadSkills() {
+  try {
+    const data = await fetchAdmin('skills');
+    const tbody = document.getElementById('skills-tbody');
+    tbody.innerHTML = '';
+    if (!Array.isArray(data) || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:24px">暂无 Skill，前往用户端上传</td></tr>';
+      return;
+    }
+    data.forEach(s => {
+      tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td><code>${s.name}</code></td>
+          <td>${s.description || ''}</td>
+          <td><small style="color:var(--text-secondary)">${s.path || ''}</small></td>
+        </tr>
+      `);
+    });
+  } catch (e) {
+    document.getElementById('skills-tbody').innerHTML =
+      `<tr><td colspan="3" style="text-align:center;color:var(--danger);padding:24px">加载失败：${e.message}</td></tr>`;
+  }
+}
+
+async function loadMetrics() {
+  const data = await fetchAdmin('metrics');
+  const tbody = document.getElementById('metrics-tbody');
+  tbody.innerHTML = '';
+  // 只显示 agent 相关
+  const filtered = data.meters.filter(m =>
+    m.name.includes('agent') || m.name.includes('tool') || m.name.includes('jvm'));
+  filtered.forEach(m => {
+    const value = m.value !== undefined ? m.value : (m.mean_ms !== undefined ? m.mean_ms.toFixed(2) + ' ms' : '-');
+    const tags = JSON.stringify(m.tags || {});
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td><code>${m.name}</code></td>
+        <td><span class="tag">${m.type}</span></td>
+        <td><strong>${value}</strong></td>
+        <td><small style="color:var(--text-secondary)">${tags}</small></td>
+      </tr>
+    `);
+  });
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:24px">暂无数据（触发一次对话后再看）</td></tr>`;
+  }
+}
+
+async function loadJvm() {
+  const data = await fetchAdmin('jvm');
+  document.getElementById('jvm-version').value = data.java_version;
+  document.getElementById('jvm-os').value = data.os;
+  document.getElementById('jvm-cpu').value = data.processors + ' 核';
+  document.getElementById('jvm-uptime').value = formatDuration(data.uptime_ms);
+  document.getElementById('jvm-mem-used').value = data.memory.used_mb + ' MB';
+  document.getElementById('jvm-mem-total').value = data.memory.total_mb + ' MB';
+  document.getElementById('jvm-mem-max').value = data.memory.max_mb + ' MB';
+}
+
+async function loadConfig() {
+  const data = await fetchAdmin('config');
+  const tbody = document.getElementById('config-tbody');
+  tbody.innerHTML = '';
+  Object.entries(data).forEach(([k, v]) => {
+    tbody.insertAdjacentHTML('beforeend',
+      `<tr><td style="width:200px;color:var(--text-secondary)">${k}</td><td><code>${v}</code></td></tr>`);
+  });
+}
+
+async function showToolInfo(name) {
+  const data = await fetchAdmin('tools/info?name=' + encodeURIComponent(name));
+  alert(JSON.stringify(data, null, 2));
+}
+
+function showToolModal(name) {
+  document.getElementById('toolModalName').textContent = name;
+  document.getElementById('toolArgs').value = name === 'system.time.now' ? '{}'
+    : name === 'shell.exec' ? '{"command":"echo hello","timeout_seconds":5}'
+    : name === 'file.read' ? '{"path":"F:/work-Todo/java-work/my-work/skills-agent-example/start.bat"}'
+    : name === 'json.process' ? '{"action":"stringify","data":{"x":1}}'
+    : name === 'text.process' ? '{"action":"case","text":"hello","mode":"upper"}'
+    : name === 'system.info' ? '{}'
+    : '{}';
+  document.getElementById('toolResult').textContent = '点击"执行"调用';
+  document.getElementById('toolModal').classList.add('show');
+}
+
+function closeToolModal() {
+  document.getElementById('toolModal').classList.remove('show');
+}
+
+async function invokeTool() {
+  const name = document.getElementById('toolModalName').textContent;
+  let args;
+  try {
+    args = JSON.parse(document.getElementById('toolArgs').value || '{}');
+  } catch (e) {
+    document.getElementById('toolResult').textContent = '参数 JSON 解析失败：' + e.message;
+    return;
+  }
+  document.getElementById('toolResult').textContent = '调用中...';
+  try {
+    const data = await fetchAdmin('tools/test?name=' + encodeURIComponent(name)
+      + '&' + new URLSearchParams(args).toString());
+    document.getElementById('toolResult').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById('toolResult').textContent = '调用失败：' + e.message;
+  }
+}
+
+function formatDuration(ms) {
+  if (ms < 1000) return ms + ' ms';
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
+
+// 初始加载
+loadOverview();
+
+async function loadTemplatesAdmin() {
+  try {
+    const resp = await fetch(MAIN_API_BASE + '/templates');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const templates = await resp.json();
+    renderAdminTemplatesList(templates);
+  } catch (err) {
+    console.error('加载模板列表失败:', err);
+    document.getElementById('adminTemplatesList').innerHTML =
+      '<div style="padding:24px;text-align:center;color:var(--text-danger);">加载失败：' + err.message + '</div>';
+  }
+}
+
+function renderAdminTemplatesList(templates) {
+  const container = document.getElementById('adminTemplatesList');
+  if (!templates.length) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-secondary);">暂无模板</div>';
+    return;
+  }
+  container.innerHTML = templates.map(t => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4 style="margin:0;font-size:16px">${t.name}</h4>
+        <span class="tag tag-info">v${t.version}</span>
+      </div>
+      ${t.description ? '<p style="color:var(--text-secondary);margin:0 0 12px 0;font-size:13px">' + t.description + '</p>' : ''}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="showAdminTemplateDetail('${t.name}')">查看/编辑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showAdminTemplateDetail(name) {
+  document.getElementById('adminTemplatesList').style.display = 'none';
+  document.getElementById('adminTemplateDetail').style.display = 'block';
+  document.getElementById('adminDetailTitle').textContent = name;
+  loadAdminTemplateDetail(name);
+}
+
+function showAdminTemplatesList() {
+  document.getElementById('adminTemplatesList').style.display = 'block';
+  document.getElementById('adminTemplateDetail').style.display = 'none';
+  document.getElementById('adminDetailContent').value = '';
+}
+
+async function loadAdminTemplateDetail(name) {
+  try {
+    const resp = await fetch(MAIN_API_BASE + `/templates/${encodeURIComponent(name)}`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const template = await resp.json();
+    document.getElementById('adminDetailVersion').textContent = template.version;
+    document.getElementById('adminDetailDate').textContent = template.createdAt;
+    document.getElementById('adminDetailDesc').value = template.description || '';
+    document.getElementById('adminDetailContent').value = template.content;
+    loadAdminVersionHistory(name);
+  } catch (err) {
+    console.error('加载模板详情失败:', err);
+    alert('加载模板详情失败：' + err.message);
+    showAdminTemplatesList();
+  }
+}
+
+async function loadAdminVersionHistory(name) {
+  try {
+    const resp = await fetch(MAIN_API_BASE + `/templates/${encodeURIComponent(name)}/history`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const history = await resp.json();
+    const container = document.getElementById('adminVersionHistory');
+    if (!history.length) {
+      container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-secondary);">暂无版本历史</div>';
+      return;
+    }
+    container.innerHTML = history.map(v => `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;${v.active ? 'background:#f0f8ff' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-weight:600">v${v.version}</span>
+          <span class="${v.active ? 'tag tag-success' : 'tag tag-info'}">${v.active ? '当前版本' : '历史版本'}</span>
+        </div>
+        <div style="color:var(--text-secondary);font-size:12px;margin-bottom:4px">${v.description || ''}</div>
+        <div style="color:var(--text-secondary);font-size:11px">${v.createdAt}</div>
+        ${!v.active ? `<button class="btn btn-sm" onclick="restoreAdminTemplate('${name}', '${v.id}')">恢复此版本</button>` : ''}
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('加载版本历史失败:', err);
+    document.getElementById('adminVersionHistory').innerHTML =
+      '<div style="padding:16px;text-align:center;color:var(--text-danger);">加载失败：' + err.message + '</div>';
+  }
+}
+
+async function saveAdminTemplate() {
+  const name = document.getElementById('adminDetailTitle').textContent;
+  const version = document.getElementById('adminDetailVersion').textContent;
+  const description = document.getElementById('adminDetailDesc').value;
+  const content = document.getElementById('adminDetailContent').value;
+
+  if (!name) {
+    alert('模板名称为空');
+    return;
+  }
+
+  try {
+    const resp = await fetch(MAIN_API_BASE + `/templates/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, description, version })
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(text || ('HTTP ' + resp.status));
+    }
+    alert('保存成功');
+    // 重新加载列表和详情
+    await loadTemplatesAdmin();
+    await loadAdminTemplateDetail(name);
+  } catch (err) {
+    console.error('保存模板失败:', err);
+    alert('保存失败：' + err.message);
+  }
+}
+
+async function restoreAdminTemplate(name, versionId) {
+  if (!confirm('确定恢复到该版本？当前未保存的修改将丢失。')) return;
+  try {
+    const resp = await fetch(MAIN_API_BASE + `/templates/${encodeURIComponent(name)}/restore/${versionId}`, { method: 'POST' });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(text || ('HTTP ' + resp.status));
+    }
+    alert('已恢复到该版本');
+    await loadTemplatesAdmin();
+    await loadAdminTemplateDetail(name);
+  } catch (err) {
+    console.error('恢复版本失败:', err);
+    alert('恢复失败：' + err.message);
+  }
+}
+
+// Agent角色相关函数
+async function loadAgentRoles() {
+  try {
+    const resp = await fetch(MAIN_API_BASE + '/templates');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const templates = await resp.json();
+    renderAgentRolesList(templates);
+  } catch (err) {
+    console.error('加载agent角色列表失败:', err);
+    document.getElementById('agentRolesList').innerHTML =
+      '<div style="padding:24px;text-align:center;color:var(--text-danger);">加载失败：' + err.message + '</div>';
+  }
+}
+
+function renderAgentRolesList(templates) {
+  const container = document.getElementById('agentRolesList');
+  if (!templates.length) {
+    container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-secondary);">暂无agent角色模板</div>';
+    return;
+  }
+  container.innerHTML = templates.map(t => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h4 style="margin:0;font-size:16px">${t.name}</h4>
+        <span class="tag tag-info">v${t.version}</span>
+      </div>
+      ${t.description ? '<p style="color:var(--text-secondary);margin:0 0 12px 0;font-size:13px">' + t.description + '</p>' : ''}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="showAgentRoleDetail('${t.name}')">查看/编辑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showAgentRoleDetail(name) {
+  document.getElementById('agentRolesList').style.display = 'none';
+  document.getElementById('agentRoleDetail').style.display = 'block';
+  document.getElementById('agentDetailTitle').textContent = name;
+  loadAgentRoleDetail(name);
+}
+
+function showAgentRolesList() {
+  document.getElementById('agentRolesList').style.display = 'block';
+  document.getElementById('agentRoleDetail').style.display = 'none';
+  document.getElementById('agentDetailContent').value = '';
+}
+
+async function loadAgentRoleDetail(name) {
+  try {
+    const resp = await fetch(MAIN_API_BASE + `/templates/${encodeURIComponent(name)}`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const template = await resp.json();
+    document.getElementById('agentDetailVersion').textContent = template.version;
+    document.getElementById('agentDetailDate').textContent = template.createdAt;
+    document.getElementById('agentDetailDesc').value = template.description || '';
+    document.getElementById('agentDetailContent').value = template.content;
+    loadAgentVersionHistory(name);
+  } catch (err) {
+    console.error('加载agent角色详情失败:', err);
+    alert('加载agent角色详情失败：' + err.message);
+    showAgentRolesList();
+  }
+}
+
+async function loadAgentVersionHistory(name) {
+  try {
+    const resp = await fetch(MAIN_API_BASE + `/templates/${encodeURIComponent(name)}/history`);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const history = await resp.json();
+    const container = document.getElementById('agentVersionHistory');
+    if (!history.length) {
+      container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-secondary);">暂无版本历史</div>';
+      return;
+    }
+    container.innerHTML = history.map(v => `
+      <div style="border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;${v.active ? 'background:#f0f8ff' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-weight:600">v${v.version}</span>
+          <span class="${v.active ? 'tag tag-success' : 'tag tag-info'}">${v.active ? '当前版本' : '历史版本'}</span>
+        </div>
+        <div style="color:var(--text-secondary);font-size:12px;margin-bottom:4px">${v.description || ''}</div>
+        <div style="color:var(--text-secondary);font-size:11px">${v.createdAt}</div>
+        ${!v.active ? `<button class="btn btn-sm" onclick="restoreAgentRole('${name}', '${v.id}')">恢复此版本</button>` : ''}
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('加载版本历史失败:', err);
+    document.getElementById('agentVersionHistory').innerHTML =
+      '<div style="padding:16px;text-align:center;color:var(--text-danger);">加载失败：' + err.message + '</div>';
+  }
+}
+
+async function saveAgentRole() {
+  const name = document.getElementById('agentDetailTitle').textContent;
+  const version = document.getElementById('agentDetailVersion').textContent;
+  const description = document.getElementById('agentDetailDesc').value;
+  const content = document.getElementById('agentDetailContent').value;
+
+  if (!name) {
+    alert('角色名称为空');
+    return;
+  }
+
+  try {
+    const resp = await fetch(MAIN_API_BASE + `/templates/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, description, version })
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(text || ('HTTP ' + resp.status));
+    }
+    alert('保存成功');
+    await loadAgentRoles();
+    await loadAgentRoleDetail(name);
+  } catch (err) {
+    console.error('保存agent角色失败:', err);
+    alert('保存失败：' + err.message);
+  }
+}
+
+async function restoreAgentRole(name, versionId) {
+  if (!confirm('确定恢复到该版本？当前未保存的修改将丢失。')) return;
+  try {
+    const resp = await fetch(MAIN_API_BASE + `/templates/${encodeURIComponent(name)}/restore/${versionId}`, { method: 'POST' });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(text || ('HTTP ' + resp.status));
+    }
+    alert('已恢复到该版本');
+    await loadAgentRoles();
+    await loadAgentRoleDetail(name);
+  } catch (err) {
+    console.error('恢复agent角色版本失败:', err);
+    alert('恢复失败：' + err.message);
+  }
+}
+
+// ============ 模型供应商管理 ============
+const PROVIDER_API = MAIN_API_BASE + '/model-providers';
+
+async function fetchProvider(path, opts) {
+  const resp = await fetch(PROVIDER_API + path, opts);
+  if (resp.status === 204) return null;
+  if (!resp.ok) {
+    let msg = 'HTTP ' + resp.status;
+    try {
+      const body = await resp.json();
+      if (body && body.message) msg = body.message;
+      else if (body && body.error && body.error.message) msg = body.error.message;
+    } catch (e) {
+      const text = await resp.text();
+      if (text) msg = text;
+    }
+    throw new Error(msg);
+  }
+  return await resp.json();
+}
+
+async function loadProvidersAdmin() {
+  try {
+    const list = await fetchProvider('');
+    renderProviders(list);
+  } catch (err) {
+    document.getElementById('providers-tbody').innerHTML =
+      '<tr><td colspan="6" style="text-align:center;color:var(--danger);padding:24px">加载失败：' + err.message + '</td></tr>';
+  }
+}
+
+function renderProviders(list) {
+  const tbody = document.getElementById('providers-tbody');
+  tbody.innerHTML = '';
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);padding:24px">暂无供应商，点击「+ 新增供应商」创建</td></tr>';
+    return;
+  }
+  list.forEach(p => {
+    const models = Array.isArray(p.availableModels) ? p.availableModels : [];
+    const activeTag = p.active ? '<span class="tag tag-success">已激活</span>' : '<span class="tag">未激活</span>';
+    const deleteBtn = p.active
+      ? '<button class="btn btn-sm" disabled title="激活供应商不可删除" style="opacity:.4">删除</button>'
+      : `<button class="btn btn-sm btn-danger" onclick="deleteProvider('${p.providerId}')">删除</button>`;
+    const switchBtn = p.active
+      ? '<span class="tag tag-info">当前</span>'
+      : `<button class="btn btn-sm" onclick="switchProvider('${p.providerId}')">切换激活</button>`;
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td><code>${p.name}</code> <small style="color:var(--text-secondary)">(${p.providerId})</small></td>
+        <td><small>${p.baseUrl}</small></td>
+        <td><code>${p.defaultModel}</code></td>
+        <td>${models.length}</td>
+        <td>${activeTag}</td>
+        <td>
+          <button class="btn btn-sm" onclick="editProvider('${p.providerId}')">编辑</button>
+          ${switchBtn}
+          <button class="btn btn-sm" onclick="testProvider('${p.providerId}')">测试</button>
+          <button class="btn btn-sm" onclick="syncProviderModels('${p.providerId}')">同步模型</button>
+          ${deleteBtn}
+        </td>
+      </tr>
+    `);
+  });
+}
+
+function showProviderModal(provider) {
+  document.getElementById('providerModalTitle').textContent = provider ? '编辑供应商' : '新增供应商';
+  document.getElementById('providerEditId').value = provider ? provider.providerId : '';
+  document.getElementById('provProviderId').value = provider ? provider.providerId : '';
+  document.getElementById('provName').value = provider ? provider.name : '';
+  document.getElementById('provBaseUrl').value = provider ? provider.baseUrl : '';
+  document.getElementById('provApiKey').value = provider ? provider.apiKey : '';
+  document.getElementById('provDefaultModel').value = provider ? provider.defaultModel : '';
+  document.getElementById('provAvailableModels').value = provider && Array.isArray(provider.availableModels)
+    ? provider.availableModels.join(',') : '';
+  const provIdInput = document.getElementById('provProviderId');
+  provIdInput.disabled = !!provider;
+  document.getElementById('providerModal').classList.add('show');
+}
+
+function closeProviderModal() {
+  document.getElementById('providerModal').classList.remove('show');
+  document.getElementById('provProviderId').disabled = false;
+}
+
+async function saveProvider() {
+  const editId = document.getElementById('providerEditId').value;
+  const payload = {
+    providerId: document.getElementById('provProviderId').value.trim(),
+    name: document.getElementById('provName').value.trim(),
+    baseUrl: document.getElementById('provBaseUrl').value.trim(),
+    apiKey: document.getElementById('provApiKey').value.trim(),
+    defaultModel: document.getElementById('provDefaultModel').value.trim(),
+    availableModels: document.getElementById('provAvailableModels').value
+      .split(',').map(s => s.trim()).filter(s => s.length > 0)
+  };
+  if (!editId && !payload.providerId) { alert('供应商ID不能为空'); return; }
+  try {
+    if (editId) {
+      await fetchProvider('/' + encodeURIComponent(editId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      await fetchProvider('', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+    closeProviderModal();
+    await loadProvidersAdmin();
+  } catch (err) {
+    alert('保存失败：' + err.message);
+  }
+}
+
+async function editProvider(providerId) {
+  try {
+    const p = await fetchProvider('/' + encodeURIComponent(providerId));
+    showProviderModal(p);
+  } catch (err) {
+    alert('加载供应商失败：' + err.message);
+  }
+}
+
+async function deleteProvider(providerId) {
+  if (!confirm('确定删除供应商「' + providerId + '」？')) return;
+  try {
+    await fetchProvider('/' + encodeURIComponent(providerId), { method: 'DELETE' });
+    await loadProvidersAdmin();
+  } catch (err) {
+    alert('删除失败：' + err.message);
+  }
+}
+
+async function switchProvider(providerId) {
+  try {
+    await fetchProvider('/' + encodeURIComponent(providerId) + '/switch', { method: 'POST' });
+    alert('已切换激活供应商：' + providerId);
+    await loadProvidersAdmin();
+  } catch (err) {
+    alert('切换失败：' + err.message);
+  }
+}
+
+async function testProvider(providerId) {
+  const box = document.getElementById('provider-test-result');
+  box.style.color = 'var(--text-secondary)';
+  box.textContent = '正在测试供应商「' + providerId + '」的连通性...';
+  try {
+    const result = await fetchProvider('/' + encodeURIComponent(providerId) + '/test', { method: 'POST' });
+    if (result.success) {
+      box.style.color = 'var(--success)';
+      box.textContent = '✅ ' + result.message;
+    } else {
+      box.style.color = 'var(--danger)';
+      box.textContent = '❌ ' + result.message;
+    }
+  } catch (err) {
+    box.style.color = 'var(--danger)';
+    box.textContent = '❌ 测试请求失败：' + err.message;
+  }
+}
+
+async function syncProviderModels(providerId) {
+  const box = document.getElementById('provider-test-result');
+  box.style.color = 'var(--text-secondary)';
+  box.textContent = '正在同步供应商「' + providerId + '」的模型列表...';
+  try {
+    const models = await fetchProvider('/' + encodeURIComponent(providerId) + '/sync-models', { method: 'POST' });
+    const count = Array.isArray(models) ? models.length : 0;
+    box.style.color = 'var(--success)';
+    box.textContent = '✅ 已同步 ' + count + ' 个模型';
+    await loadProvidersAdmin();
+  } catch (err) {
+    box.style.color = 'var(--danger)';
+    box.textContent = '❌ 同步失败：' + err.message;
+  }
+}
+</script>
+</body>
+</html>

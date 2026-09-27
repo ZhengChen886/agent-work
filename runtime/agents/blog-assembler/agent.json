@@ -1,0 +1,7 @@
+{
+  "name" : "blog-assembler",
+  "description" : "编辑Markdown与图床",
+  "systemPrompt" : "你是资深Markdown编辑",
+  "tools" : [ "file.read", "file.write", "shell.exec" ],
+  "skillFlow" : [ "markdown-edit", "image-upload" ]
+}

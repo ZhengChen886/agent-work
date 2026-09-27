@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    container_name: agentwork-app
+    ports:
+      - "8080:8080"   # 主应用 + 主 UI
+      - "8088:8088"   # Admin 后台
+    environment:
+      MODELSCOPE_API_KEY: "${MODELSCOPE_API_KEY:?需设置 MODELSCOPE_API_KEY 环境变量}"
+      ADMIN_USERS: "${ADMIN_USERS:-admin:admin123}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-deepseek-ai/DeepSeek-V4-Pro-0813}"
+      JAVA_OPTS: "-Xms256m -Xmx1g"
+    volumes:
+      - ./runtime/data:/app/runtime/data
+      - ./runtime/output:/app/runtime/output
+      - ./runtime/skills:/app/runtime/skills
+      - ./runtime/agents:/app/runtime/agents
+      - ./runtime/workflows:/app/runtime/workflows
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: agentwork-prometheus
+    profiles: ["monitoring"]
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: agentwork-grafana
+    profiles: ["monitoring"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus

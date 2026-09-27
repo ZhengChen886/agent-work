@@ -1,0 +1,6 @@
+{
+  "name": "hexo-generator",
+  "description": "把文章正文转换为带 YAML frontmatter 的 Hexo 博客文章",
+  "systemPrompt": "你负责把普通 Markdown 文章包装成 Hexo 可识别的博客文章（含 frontmatter）。",
+  "tools": ["file.read", "file.write", "shell.exec"]
+}

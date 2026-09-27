@@ -1,0 +1,39 @@
+{
+  "name" : "publish-article",
+  "description" : "由前端画布编排的工作流",
+  "nodes" : [ {
+    "id" : "n1",
+    "type" : "agent",
+    "agent" : null,
+    "ref" : "author",
+    "agentNode" : true
+  }, {
+    "id" : "n2",
+    "type" : "agent",
+    "agent" : null,
+    "ref" : "hexo-generator",
+    "agentNode" : true
+  }, {
+    "id" : "n3",
+    "type" : "agent",
+    "agent" : null,
+    "ref" : "blog-assembler",
+    "agentNode" : true
+  }, {
+    "id" : "n4",
+    "type" : "agent",
+    "agent" : null,
+    "ref" : "git-publisher",
+    "agentNode" : true
+  } ],
+  "edges" : [ {
+    "from" : "n1",
+    "to" : "n2"
+  }, {
+    "from" : "n2",
+    "to" : "n3"
+  }, {
+    "from" : "n3",
+    "to" : "n4"
+  } ]
+}

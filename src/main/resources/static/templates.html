@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prompt 模板管理</title>
+<style>
+  :root {
+    --primary: #615ced;
+    --primary-hover: #4e4bdb;
+    --bg: #f7f8fc;
+    --panel: #ffffff;
+    --border: #e8e9f0;
+    --text: #1f2329;
+    --text-secondary: #8a8f99;
+    --danger: #d4380d;
+    --danger-bg: #fff2f0;
+    --success: #52c41a;
+    --radius: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .header h1 { font-size: 18px; }
+  .header .badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 6px;
+    background: var(--primary); color: #fff;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  /* 模板列表 */
+  .template-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .template-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; cursor: pointer;
+    transition: all .15s;
+  }
+  .template-card:hover { border-color: var(--primary); box-shadow: 0 2px 12px rgba(97,92,237,.1); }
+  .template-card.active { border-color: var(--primary); background: #fafbff; }
+  .template-card .name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .template-card .meta { font-size: 12px; color: var(--text-secondary); }
+  .template-card .version { font-size: 11px; background: var(--user-bubble); padding: 2px 8px; border-radius: 4px; }
+
+  /* 编辑区 */
+  .editor-panel {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .editor-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    background: #fafbfc;
+  }
+  .editor-header h2 { font-size: 15px; }
+  .editor-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 6px 14px; border-radius: 6px; font-size: 13px;
+    cursor: pointer; border: 1px solid var(--border); background: #fff;
+    transition: all .15s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-danger { border-color: #ffccc7; color: var(--danger); background: #fff; }
+  .btn-danger:hover { background: var(--danger-bg); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .editor-body { display: flex; min-height: 500px; }
+  .editor-sidebar {
+    width: 260px; border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 8px;
+  }
+  .version-item {
+    padding: 8px 10px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; margin-bottom: 2px;
+  }
+  .version-item:hover { background: #f0f1fa; }
+  .version-item.active { background: var(--user-bubble); color: var(--primary); }
+  .version-item .v-version { font-weight: 600; }
+  .version-item .v-date { font-size: 11px; color: var(--text-secondary); }
+  .version-item .v-desc { font-size: 11px; color: var(--text-secondary); }
+
+  .editor-main { flex: 1; display: flex; flex-direction: column; }
+  .editor-info {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--text-secondary);
+    display: flex; gap: 16px; align-items: center;
+  }
+  .editor-info input {
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 8px; font-size: 12px; width: 200px;
+  }
+  textarea.editor-content {
+    flex: 1; width: 100%; border: none; outline: none;
+    padding: 16px; font-family: "JetBrains Mono", "Courier New", monospace;
+    font-size: 13px; line-height: 1.6; resize: none; background: #fafbfc;
+  }
+
+  /* 消息提示 */
+  .toast {
+    position: fixed; top: 20px; right: 20px;
+    padding: 12px 20px; border-radius: 8px;
+    font-size: 13px; z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
+  .toast-success { background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; }
+  .toast-error { background: #fff2f0; border: 1px solid #ffccc7; color: var(--danger); }
+
+  .empty-state {
+    text-align: center; padding: 48px 20px; color: var(--text-secondary); font-size: 14px;
+  }
+
+  /* Markdown 预览 */
+  .preview-toggle {
+    display: flex; gap: 8px; padding: 8px 16px;
+    border-bottom: 1px solid var(--border); background: #fafbfc;
+  }
+  .preview-toggle button {
+    border: none; background: none; cursor: pointer;
+    font-size: 13px; color: var(--text-secondary); padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .preview-toggle button.active { background: var(--user-bubble); color: var(--primary); }
+  .preview-content { padding: 16px; overflow-y: auto; max-height: 400px; }
+  .preview-content h1, .preview-content h2, .preview-content h3 { margin: 12px 0 8px; }
+  .preview-content p { margin-bottom: 8px; line-height: 1.6; }
+  .preview-content code { background: #f0f1fa; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+  .preview-content pre { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📝 Prompt 模板管理 <span class="badge">管理后台</span></h1>
+</div>
+
+<div class="container">
+  <!-- 模板列表 -->
+  <div id="templateList" class="template-grid"></div>
+
+  <!-- 编辑面板 -->
+  <div id="editorPanel" style="display:none">
+    <div class="editor-panel">
+      <div class="editor-header">
+        <h2 id="editorTitle">模板编辑</h2>
+        <div class="editor-actions">
+          <button class="btn" onclick="previewContent()">预览</button>
+          <button class="btn btn-primary" onclick="saveTemplate()">保存</button>
+        </div>
+      </div>
+      <div class="editor-body">
+        <div class="editor-sidebar" id="versionSidebar">
+          <div style="padding:8px;font-size:12px;color:var(--text-secondary);">版本历史</div>
+        </div>
+        <div class="editor-main">
+          <div class="editor-info">
+            <span>版本: <strong id="editorVersion"></strong></span>
+            <span>更新: <strong id="editorDate"></strong></span>
+            <span>描述:</span>
+            <input id="editorDescription" placeholder="版本描述" />
+          </div>
+          <div class="preview-toggle" id="previewToggle" style="display:none">
+            <button class="active" onclick="switchView('edit')">编辑</button>
+            <button onclick="switchView('preview')">预览</button>
+          </div>
+          <textarea id="editorContent" class="editor-content" placeholder="编辑模板内容..."></textarea>
+          <div id="previewContent" class="preview-content" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api/templates';
+let templates = [];
+let currentTemplate = null;
+let currentView = 'edit';
+
+async function loadTemplates() {
+  try {
+    const resp = await fetch(API);
+    templates = await resp.json();
+    renderTemplateList();
+  } catch (err) {
+    console.error('加载模板失败:', err);
+  }
+}
+
+function renderTemplateList() {
+  const container = document.getElementById('templateList');
+  if (!templates.length) {
+    container.innerHTML = '<div class="empty-state">暂无模板</div>';
+    return;
+  }
+  container.innerHTML = templates.map(t => `
+    <div class="template-card ${currentTemplate && currentTemplate.name === t.name ? 'active' : ''}" onclick="selectTemplate('${t.name}')">
+      <div class="name">${t.name}</div>
+      <div class="meta">
+        <span class="version">v${t.version}</span>
+        ${t.description ? ' · ' + t.description : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function selectTemplate(name) {
+  try {
+    const resp = await fetch(API + '/' + encodeURIComponent(name));
+    currentTemplate = await resp.json();
+    document.getElementById('editorPanel').style.display = 'block';
+    document.getElementById('editorTitle').textContent = '模板: ' + name;
+    document.getElementById('editorVersion').textContent = currentTemplate.version;
+    document.getElementById('editorDate').textContent = currentTemplate.createdAt;
+    document.getElementById('editorDescription').value = currentTemplate.description || '';
+    document.getElementById('editorContent').value = currentTemplate.content;
+    document.getElementById('previewContent').innerHTML = '';
+    document.getElementById('previewToggle').style.display = 'flex';
+    switchView('edit');
+    loadVersionHistory(name);
+  } catch (err) {
+    console.error('加载模板失败:', err);
+  }
+}
+
+async function loadVersionHistory(name) {
+  try {
+    const resp = await fetch(API + '/' + encodeURIComponent(name) + '/history');
+    const history = await resp.json();
+    const sidebar = document.getElementById('versionSidebar');
+    sidebar.innerHTML = '<div style="padding:8px;font-size:12px;color:var(--text-secondary);">版本历史</div>' +
+      history.map(v => `
+        <div class="version-item ${v.active ? 'active' : ''}" onclick="restoreVersion('${name}', '${v.id}')">
+          <div class="v-version">v${v.version}</div>
+          <div class="v-date">${v.createdAt}</div>
+          <div class="v-desc">${v.description || ''}</div>
+        </div>
+      `).join('');
+  } catch (err) {
+    console.error('加载版本历史失败:', err);
+  }
+}
+
+async function restoreVersion(name, versionId) {
+  if (!confirm('确定恢复到该版本？当前未保存的修改将丢失。')) return;
+  try {
+    const resp = await fetch(API + '/' + encodeURIComponent(name) + '/restore/' + versionId, { method: 'POST' });
+    if (!resp.ok) throw new Error('恢复失败');
+    showToast('已恢复到该版本', 'success');
+    await loadTemplates();
+    await selectTemplate(name);
+  } catch (err) {
+    showToast('恢复失败: ' + err.message, 'error');
+  }
+}
+
+async function saveTemplate() {
+  if (!currentTemplate) return;
+  const name = currentTemplate.name;
+  const content = document.getElementById('editorContent').value;
+  const description = document.getElementById('editorDescription').value;
+  const version = document.getElementById('editorVersion').textContent;
+
+  try {
+    const resp = await fetch(API + '/' + encodeURIComponent(name), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, description, version })
+    });
+    if (!resp.ok) throw new Error('保存失败');
+    const result = await resp.json();
+    currentTemplate = result;
+    document.getElementById('editorVersion').textContent = result.version;
+    document.getElementById('editorDate').textContent = result.createdAt;
+    showToast('保存成功', 'success');
+    await loadTemplates();
+    await loadVersionHistory(name);
+  } catch (err) {
+    showToast('保存失败: ' + err.message, 'error');
+  }
+}
+
+function switchView(view) {
+  currentView = view;
+  const editEl = document.getElementById('editorContent');
+  const previewEl = document.getElementById('previewContent');
+  const toggleEl = document.getElementById('previewToggle');
+
+  if (view === 'edit') {
+    editEl.style.display = 'block';
+    previewEl.style.display = 'none';
+    toggleEl.querySelector('button:nth-child(1)').classList.add('active');
+    toggleEl.querySelector('button:nth-child(2)').classList.remove('active');
+  } else {
+    editEl.style.display = 'none';
+    previewEl.style.display = 'block';
+    toggleEl.querySelector('button:nth-child(1)').classList.remove('active');
+    toggleEl.querySelector('button:nth-child(2)').classList.add('active');
+    // 简单 Markdown 渲染
+    previewEl.innerHTML = marked.parse(editEl.value) || '<p>预览</p>';
+  }
+}
+
+function previewContent() {
+  const editEl = document.getElementById('editorContent');
+  const previewEl = document.getElementById('previewContent');
+  if (currentView === 'edit') {
+    switchView('preview');
+  } else {
+    switchView('edit');
+  }
+}
+
+function showToast(msg, type) {
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// 初始化
+loadTemplates();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</body>
+</html>

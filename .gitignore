@@ -1,0 +1,46 @@
+# Build output
+target/
+
+# Database files
+runtime/data/
+runtime/output/
+
+# IDE and editor files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Maven settings (local environment config)
+maven-settings.xml
+
+# Application config with secrets
+src/main/resources/application.yml
+.env
+.env.example
+
+# Backup files (防御 application.yml.bak 回归)
+*.bak
+*.bak.*
+*~
+*.swp
+
+# Logs
+*.log
+logs/
+
+# Temp files
+*.tmp
+*.temp
+
+# Python
+__pycache__/
+*.pyc
