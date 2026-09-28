@@ -469,7 +469,7 @@
   .settings-tip { font-size: 12px; color: var(--text-secondary); min-height: 16px; }
 
   .chat-container { flex: 1; overflow-y: auto; padding: 24px 0; scrollbar-gutter: stable; }
-  .chat-inner { max-width: min(960px, 100%); margin: 0 auto; padding: 0 clamp(20px, 4vw, 44px); }
+  .chat-inner { width: 90%;  margin: 0 auto; padding: 0 clamp(20px, 4vw, 44px); }
 
   /* ===== Landing ===== */
   .landing { text-align: center; padding-top: 8vh; }
@@ -640,7 +640,7 @@
   /* ===== 输入区 ===== */
   .sender-wrap { padding: 12px 0 20px; }
   .sender {
-    max-width: min(960px, 100%); margin: 0 auto; padding: 0 clamp(20px, 4vw, 44px);
+    width: 90%; margin: 0 auto; padding: 0 clamp(20px, 4vw, 44px);
   }
   .sender-box {
     display: flex; align-items: flex-end; gap: 10px;
@@ -669,8 +669,8 @@
   @media (max-width: 760px) {
     .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 30; box-shadow: 4px 0 24px rgba(0,0,0,.08); }
     .sidebar.collapsed { margin-left: -260px; }
-    .chat-inner { padding: 0 16px; }
-    .sender { padding: 0 16px; }
+    .chat-inner { width: 100%; max-width: 100%; padding: 0 16px; }
+    .sender { width: 100%; max-width: 100%; padding: 0 16px; }
     .header { padding: 0 12px; }
   }
 
@@ -1743,12 +1743,12 @@
     switchWfPane(document.querySelector('.wf-output-tab[data-pane="answer"]'), 'answer');
 
     let full = '';
-    let createdConvId = currentConvId; // 运行结束后会带回
+    let createdConvId = null; // 运行结束后会带回（工作流每次运行均新建会话）
     try {
       const resp = await fetch(API.workflows + '/' + encodeURIComponent(name) + '/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: inputText, conversationId: currentConvId })
+        body: JSON.stringify({ message: inputText })
       });
       if (!resp.ok || !resp.body) throw new Error('HTTP ' + resp.status);
       const reader = resp.body.getReader();
