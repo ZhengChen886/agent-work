@@ -4,6 +4,9 @@ import com.alibaba.cloud.ai.graph.agent.Agent;
 import com.alibaba.cloud.ai.graph.agent.hook.Hook;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
+import com.cloud.alibaba.ai.example.skills.skillsagentexample.hitl.HitlManager;
+import com.cloud.alibaba.ai.example.skills.skillsagentexample.hitl.HitlProperties;
+import com.cloud.alibaba.ai.example.skills.skillsagentexample.hitl.HitlToolInterceptor;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.trace.ProcessLogCollector;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.workflow.AgentFactory;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.workflow.AgentRepository;
@@ -38,18 +41,24 @@ public class WorkflowService {
     private final WorkflowEngine workflowEngine;
     private final AgentFactory agentFactory;
     private final ProcessLogCollector processLogCollector;
+    private final HitlManager hitlManager;
+    private final HitlProperties hitlProperties;
     private final Map<String, Agent> workflowCache = new ConcurrentHashMap<>();
 
     public WorkflowService(AgentRepository agentRepository,
             WorkflowRepository workflowRepository,
             WorkflowEngine workflowEngine,
             AgentFactory agentFactory,
-            ProcessLogCollector processLogCollector) {
+            ProcessLogCollector processLogCollector,
+            HitlManager hitlManager,
+            HitlProperties hitlProperties) {
         this.agentRepository = agentRepository;
         this.workflowRepository = workflowRepository;
         this.workflowEngine = workflowEngine;
         this.agentFactory = agentFactory;
         this.processLogCollector = processLogCollector;
+        this.hitlManager = hitlManager;
+        this.hitlProperties = hitlProperties;
     }
 
     public List<AgentSummary> listAgents() {
@@ -145,8 +154,11 @@ public class WorkflowService {
 
         java.util.function.Supplier<List<Hook>> traceHooksFactory =
                 () -> {
+                    // HITL 人工审批：工作流路径使用固定 sessionId（与 trace 拦截器一致）
+                    HitlToolInterceptor hitlToolInterceptor = new HitlToolInterceptor(
+                            hitlManager, hitlProperties, () -> sessionId);
                     WorkflowTraceAgentHook ah =
-                            new WorkflowTraceAgentHook(processLogCollector, sessionId);
+                            new WorkflowTraceAgentHook(processLogCollector, sessionId, hitlToolInterceptor);
                     WorkflowTraceModelHook mh =
                             new WorkflowTraceModelHook(processLogCollector, sessionId);
                     return List.of(ah, mh);

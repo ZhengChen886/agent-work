@@ -1,6 +1,7 @@
 package com.cloud.alibaba.ai.example.skills.skillsagentexample.service;
 
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.entity.Conversation;
+import com.cloud.alibaba.ai.example.skills.skillsagentexample.hitl.HitlManager;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.repository.ConversationRepository;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.repository.MessageRepository;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.trace.ProcessLogCollector;
@@ -20,13 +21,16 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final ProcessLogCollector processLogCollector;
+    private final HitlManager hitlManager;
 
     public ConversationService(ConversationRepository conversationRepository,
                                MessageRepository messageRepository,
-                               ProcessLogCollector processLogCollector) {
+                               ProcessLogCollector processLogCollector,
+                               HitlManager hitlManager) {
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.processLogCollector = processLogCollector;
+        this.hitlManager = hitlManager;
     }
 
     @Transactional
@@ -56,6 +60,8 @@ public class ConversationService {
         // 通过 conversationRepository 删除时，由于级联设置，messages 会一起删
         conversationRepository.deleteById(id);
         processLogCollector.clear(id);
+        // HITL：清理该会话的审批请求，并唤醒仍阻塞等待审批的 Agent 线程（按拒绝处理）
+        hitlManager.cleanupSession(id);
         log.info("Deleted conversation: {}", id);
     }
 

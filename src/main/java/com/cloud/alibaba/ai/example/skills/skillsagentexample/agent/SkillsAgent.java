@@ -9,6 +9,9 @@ import com.alibaba.cloud.ai.graph.agent.interceptor.skills.SkillsInterceptor;
 import com.alibaba.cloud.ai.graph.skills.SkillMetadata;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.filesystem.FileSystemSkillRegistry;
+import com.cloud.alibaba.ai.example.skills.skillsagentexample.hitl.HitlManager;
+import com.cloud.alibaba.ai.example.skills.skillsagentexample.hitl.HitlProperties;
+import com.cloud.alibaba.ai.example.skills.skillsagentexample.hitl.HitlToolInterceptor;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.model.entity.ModelProvider;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.model.service.ModelProviderService;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.tool.ToolRegistry;
@@ -66,6 +69,8 @@ public class SkillsAgent {
     private final PromptTemplateManager promptTemplateManager;
     private final PlatformDetector platformDetector;
     private final ProcessLogCollector processLogCollector;
+    private final HitlManager hitlManager;
+    private final HitlProperties hitlProperties;
     private final boolean preferProvider;
     private final int recursionLimit;
     private final int modelRetryMaxAttempts;
@@ -81,6 +86,8 @@ public class SkillsAgent {
                        PromptTemplateManager promptTemplateManager,
                        PlatformDetector platformDetector,
                        ProcessLogCollector processLogCollector,
+                       HitlManager hitlManager,
+                       HitlProperties hitlProperties,
                        @Value("${agent.model.prefer-provider:true}") boolean preferProvider,
                        @Value("${agent.recursion-limit:2147483647}") int recursionLimit,
                        @Value("${agent.model.retry.max-attempts:3}") int modelRetryMaxAttempts,
@@ -91,6 +98,8 @@ public class SkillsAgent {
         this.promptTemplateManager = promptTemplateManager;
         this.platformDetector = platformDetector;
         this.processLogCollector = processLogCollector;
+        this.hitlManager = hitlManager;
+        this.hitlProperties = hitlProperties;
         this.preferProvider = preferProvider;
         this.recursionLimit = recursionLimit;
         this.modelRetryMaxAttempts = Math.max(1, modelRetryMaxAttempts);
@@ -291,7 +300,10 @@ public class SkillsAgent {
             .build();
 
         // 思考过程追踪：普通聊天也需要把 Agent/模型/工具步骤推到前端（类 kimi 折叠面板）
-        ChatTraceAgentHook traceAgentHook = new ChatTraceAgentHook(processLogCollector);
+        // HITL 人工审批：会话 ID 与追踪拦截器同源（ChatSessionContext ThreadLocal）
+        HitlToolInterceptor hitlToolInterceptor = new HitlToolInterceptor(
+                hitlManager, hitlProperties, ChatSessionContext::get);
+        ChatTraceAgentHook traceAgentHook = new ChatTraceAgentHook(processLogCollector, hitlToolInterceptor);
         ChatTraceModelHook traceModelHook = new ChatTraceModelHook(processLogCollector);
 
         // 从 PromptTemplateManager 加载系统提示词，定义 Agent 角色、能力边界、输出契约

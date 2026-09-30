@@ -728,6 +728,29 @@
   .plog-step-tag.MODEL_CALL  { background: #f3eaff; color: #6c3fc4; }
   .plog-step-tag.TOOL_CALL   { background: #fff4e0; color: #b06a00; }
   .plog-step-tag.ERROR       { background: #fde6e6; color: #c4302b; }
+  .plog-step-tag.HITL_REQUEST {
+    background: #ffe9d6; color: #c2530e;
+    animation: plog-hitl-pulse 1.6s ease-in-out infinite;
+  }
+  .plog-step-tag.HITL_DECISION { background: #eef1f6; color: #4a5568; }
+  .plog-step-tag.HITL_DECISION[data-decision="APPROVED"] { background: #ecf7ee; color: #1d8d3d; }
+  .plog-step-tag.HITL_DECISION[data-decision="REJECTED"] { background: #fde6e6; color: #c4302b; }
+  .plog-step-tag.HITL_DECISION[data-decision="TIMEOUT"]  { background: #fde6e6; color: #c4302b; }
+  @keyframes plog-hitl-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(194,83,14,0.0); }
+    50%      { opacity: 0.75; box-shadow: 0 0 0 3px rgba(194,83,14,0.25); }
+  }
+  .hitl-actions { margin-top: 6px; display: flex; gap: 8px; align-items: center; }
+  .hitl-btn {
+    border: none; border-radius: 6px; cursor: pointer;
+    padding: 4px 14px; font-size: 12px; font-weight: 600;
+  }
+  .hitl-btn-approve { background: #1d8d3d; color: #fff; }
+  .hitl-btn-approve:hover { background: #177032; }
+  .hitl-btn-reject { background: #c4302b; color: #fff; }
+  .hitl-btn-reject:hover { background: #a32723; }
+  .hitl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .hitl-hint { font-size: 11px; color: var(--text-secondary); }
   .plog-step-tag.RETRYING    {
     background: #fff7d6; color: #966400;
     animation: plog-retry-pulse 1.4s ease-in-out infinite;
@@ -1856,15 +1879,102 @@
           + '</div></details>';
       }
     }
+
+    // ===== HITL 人工审批 =====
+    let hitlExtra = '';
+    if (step === 'HITL_REQUEST') {
+      const hitlId = ev.toolArgs && ev.toolArgs._hitlRequestId;
+      const timeoutAt = ev.toolArgs && ev.toolArgs._hitlTimeoutAt;
+      const argsNoMeta = {};
+      if (ev.toolArgs) {
+        Object.keys(ev.toolArgs).forEach(k => {
+          if (k !== '_hitlRequestId' && k !== '_hitlTimeoutAt') argsNoMeta[k] = ev.toolArgs[k];
+        });
+      }
+      const fields = [];
+      if (ev.toolName) fields.push({ label: '工具', value: ev.toolName, kind: 'tool' });
+      if (Object.keys(argsNoMeta).length) {
+        fields.push({ label: '参数', value: formatToolArgs(argsNoMeta), kind: 'json' });
+      }
+      const detailHtml = fields.length
+        ? '<details class="plog-tool-detail" open>'
+          + '<summary class="plog-tool-summary">待审批工具调用详情（' + fields.length + ' 项）</summary>'
+          + '<div class="plog-tool-fields">'
+          + fields.map(f => plogFieldHtml(f.label, f.value, f.kind)).join('')
+          + '</div></details>'
+        : '';
+      const timeoutHint = timeoutAt
+        ? '（' + new Date(timeoutAt).toLocaleTimeString() + ' 前有效）' : '';
+      if (hitlId) item.dataset.hitlId = hitlId;
+      if (ev.status === 'PENDING' && hitlId) {
+        hitlExtra = detailHtml
+          + '<div class="hitl-actions" data-hitl-id="' + escapeHtml(hitlId) + '">'
+          + '<button class="hitl-btn hitl-btn-approve" onclick="hitlDecide(\'' + escapeHtml(hitlId) + '\', \'APPROVE\', this)">批准执行</button>'
+          + '<button class="hitl-btn hitl-btn-reject" onclick="hitlDecide(\'' + escapeHtml(hitlId) + '\', \'REJECT\', this)">拒绝</button>'
+          + '<span class="hitl-hint">等待人工审批' + timeoutHint + '</span>'
+          + '</div>';
+      } else {
+        hitlExtra = detailHtml;
+      }
+    } else if (step === 'HITL_DECISION') {
+      // 给 step 标签带上决策状态着色，并联动禁用同请求的审批按钮
+      const hitlId = ev.toolArgs && ev.toolArgs._hitlRequestId;
+      if (hitlId) {
+        listEl.querySelectorAll('.plog-item[data-hitl-id="' + hitlId + '"]').forEach(reqItem => {
+          reqItem.querySelectorAll('.hitl-actions button').forEach(b => b.disabled = true);
+          const hint = reqItem.querySelector('.hitl-hint');
+          if (hint) hint.textContent = '该请求已处理';
+        });
+      }
+    }
+
     item.innerHTML = '<span class="plog-seq">' + seq + '</span>'
-      + '<span class="plog-step-tag ' + escapeHtml(step) + '">' + escapeHtml(step) + '</span>'
-      + body + toolDetail;
+      + '<span class="plog-step-tag ' + escapeHtml(step) + '"'
+      + (step === 'HITL_DECISION' ? ' data-decision="' + escapeHtml(ev.status || '') + '"' : '')
+      + '>' + escapeHtml(step) + '</span>'
+      + body + toolDetail + hitlExtra;
     listEl.appendChild(item);
     badgeEl.textContent = listEl.querySelectorAll('.plog-item').length;
     // 自动滚动
     const cb = listEl.closest('.wf-output-pane');
     if (cb) cb.scrollTop = cb.scrollHeight;
   }
+
+  /** HITL 审批决策：提交到 /api/hitl/requests/{id}/decide，并联动禁用按钮。 */
+  async function hitlDecide(requestId, action, btnEl) {
+    const actionsBox = btnEl.closest('.hitl-actions');
+    const buttons = actionsBox ? actionsBox.querySelectorAll('button') : [btnEl];
+    const hint = actionsBox ? actionsBox.querySelector('.hitl-hint') : null;
+    buttons.forEach(b => b.disabled = true);
+
+    let note = '';
+    if (action === 'REJECT') {
+      note = prompt('拒绝理由（可选，会反馈给 Agent）：', '') || '';
+    }
+    try {
+      const resp = await fetch('/api/hitl/requests/' + encodeURIComponent(requestId) + '/decide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action, responder: 'web-ui', note: note })
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        if (hint) hint.textContent = action === 'APPROVE' ? '✅ 已批准' : '⛔ 已拒绝';
+      } else if (resp.status === 409) {
+        if (hint) hint.textContent = '该审批已被处理（' + (data.status || '') + '）';
+      } else if (resp.status === 404) {
+        if (hint) hint.textContent = '审批请求不存在或已过期';
+      } else {
+        if (hint) hint.textContent = '提交失败：HTTP ' + resp.status;
+        buttons.forEach(b => b.disabled = false);
+      }
+    } catch (err) {
+      console.error('[HITL] decide failed:', err);
+      if (hint) hint.textContent = '提交失败：' + err.message;
+      buttons.forEach(b => b.disabled = false);
+    }
+  }
+  window.hitlDecide = hitlDecide;
 
   /** 把工具参数对象格式化为可读文本：
    * - 值为短字符串/数字 → 「k: v」一行

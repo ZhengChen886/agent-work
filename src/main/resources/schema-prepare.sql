@@ -60,3 +60,23 @@ CREATE INDEX IF NOT EXISTS idx_trace_logs_session
     ON trace_logs(session_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_trace_logs_created
     ON trace_logs(created_at);
+
+-- HITL 人工审批请求（HitlManager 单点写入）
+-- 生命周期: PENDING -> APPROVED / REJECTED / TIMEOUT；超期孤儿由内部任务兜底清理
+CREATE TABLE IF NOT EXISTS hitl_requests (
+    id           VARCHAR(64)  PRIMARY KEY,
+    session_id   VARCHAR(64)  NOT NULL,
+    tool_name    VARCHAR(128) NOT NULL,
+    tool_args    TEXT,
+    reason       VARCHAR(512),
+    status       VARCHAR(16)  NOT NULL DEFAULT 'PENDING',
+    responder    VARCHAR(128),
+    note         TEXT,
+    created_at   TIMESTAMP    NOT NULL,
+    responded_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_hitl_session
+    ON hitl_requests(session_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_hitl_status
+    ON hitl_requests(status, created_at);

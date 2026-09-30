@@ -5,6 +5,7 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.AgentHook;
 import com.alibaba.cloud.ai.graph.agent.interceptor.ToolInterceptor;
+import com.cloud.alibaba.ai.example.skills.skillsagentexample.hitl.HitlToolInterceptor;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.trace.ProcessLogCollector;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.trace.ProcessLogEntry;
 import com.cloud.alibaba.ai.example.skills.skillsagentexample.workflow.interceptor.ToolTraceInterceptor;
@@ -32,13 +33,21 @@ public class WorkflowTraceAgentHook extends AgentHook {
     private final String fixedSessionId;
     private final AtomicReference<String> currentAgentName = new AtomicReference<>();
     private final ToolTraceInterceptor toolInterceptor;
+    /** HITL 人工审批拦截器，可为 null（未装配时跳过）。 */
+    private final HitlToolInterceptor hitlInterceptor;
     /** sessionId -> agentName -> start timestamp：用于计算 duration。 */
     private final Map<String, Map<String, Long>> startTimes = new ConcurrentHashMap<>();
 
     public WorkflowTraceAgentHook(ProcessLogCollector collector, String fixedSessionId) {
+        this(collector, fixedSessionId, null);
+    }
+
+    public WorkflowTraceAgentHook(ProcessLogCollector collector, String fixedSessionId,
+                                  HitlToolInterceptor hitlInterceptor) {
         this.collector = collector;
         this.fixedSessionId = fixedSessionId;
         this.toolInterceptor = new ToolTraceInterceptor(collector, fixedSessionId, currentAgentName);
+        this.hitlInterceptor = hitlInterceptor;
     }
 
     @Override
@@ -64,7 +73,9 @@ public class WorkflowTraceAgentHook extends AgentHook {
 
     @Override
     public List<ToolInterceptor> getToolInterceptors() {
-        return List.of(toolInterceptor);
+        return hitlInterceptor == null
+                ? List.of(toolInterceptor)
+                : List.of(toolInterceptor, hitlInterceptor);
     }
 
     @Override
